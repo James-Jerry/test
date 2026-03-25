@@ -3,10 +3,10 @@ import requests
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse # 🌟 新增：用于返回 HTML 文件
 
 app = FastAPI()
 
-# 允许你的 Gitee Pages 跨域访问这个接口
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], 
@@ -18,7 +18,6 @@ app.add_middleware(
 class ContentRequest(BaseModel):
     text: str
 
-# 统一封装调用 Coze 的函数
 def call_coze(prompt: str):
     api_key = os.getenv("COZE_API_KEY")
     bot_id = os.getenv("COZE_BOT_ID")
@@ -44,13 +43,16 @@ def call_coze(prompt: str):
     except Exception as e:
         raise HTTPException(status_code=502, detail=str(e))
 
-# 功能 1：合同分析接口
+# 🌟 新增核心逻辑：当用户访问首页时，直接把 index.html 网页发给他们！
+@app.get("/")
+def read_root():
+    # 确保你的 html 文件名必须完全等于 "index.html"（全小写）
+    return FileResponse("index.html")
+
 @app.post("/api/scan-contract")
 def scan_contract(req: ContentRequest):
-    # 要求 Coze 输出结构化 JSON 便于前端渲染红绿灯警告
     return call_coze(f"你是一个法律专家。请审查以下条款，寻找霸王条款或陷阱。必须严格输出JSON，格式：{{\"risk_level\": \"高/中/低\", \"issue\": \"风险点\", \"suggestion\": \"修改建议\"}}。条款内容：{req.text}")
 
-# 功能 2：法律问答接口
 @app.post("/api/legal-qa")
 def legal_qa(req: ContentRequest):
     return call_coze(f"你是一个专注农业电商的法律助手。请用大白话解答以下问题：{req.text}")
