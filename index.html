@@ -25,7 +25,7 @@
         <textarea v-model="contractText" rows="4" class="w-full border rounded-lg p-2 text-sm focus:ring-green-500 focus:border-green-500 mb-4" placeholder="例如：买家可在收到水果后30天内无理由退款并要求十倍赔偿..."></textarea>
         
         <button @click="analyzeContract" :disabled="isLoading" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg flex justify-center items-center">
-            <span v-if="isLoading">AI 分析中...</span>
+            <span v-if="isLoading">AI 读取中...</span>
             <span v-else>扫描风险</span>
         </button>
 
@@ -50,7 +50,7 @@
 
         <div v-if="qaResult" class="mt-6">
             <h3 class="font-bold text-gray-800 mb-2">解答：</h3>
-            <div class="bg-blue-50 p-4 rounded-lg text-sm text-gray-800 leading-relaxed">
+            <div class="bg-blue-50 p-4 rounded-lg text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
                 {{ qaResult }}
             </div>
         </div>
@@ -59,9 +59,6 @@
 
 <script>
     const { createApp, ref } = Vue;
-
-    // ⚠️ 极其重要：替换为你自己在 Render 上的后端链接！
-    const BACKEND_URL = "https://test-jjtw.onrender.com"; 
 
     createApp({
         setup() {
@@ -72,49 +69,68 @@
             const qaResult = ref('');
             const isLoading = ref(false);
 
-            // 提取 Coze 答案的辅助函数
-            const extractAnswer = (apiResponse) => {
-                if(apiResponse.code === 0 && apiResponse.data.messages) {
-                    const answerMsg = apiResponse.data.messages.find(msg => msg.type === 'answer');
-                    return answerMsg ? answerMsg.content : "AI 返回的数据为空";
-                }
-                return "请求失败：" + (apiResponse.msg || "未知错误");
-            };
-
+            // 模块一：合同流式扫描
             const analyzeContract = async () => {
                 if(!contractText.value) return alert("请输入合同内容");
                 isLoading.value = true;
-                scanResult.value = '';
+                scanResult.value = ''; // 点击时清空上一次的结果
                 try {
                     const res = await fetch(`/api/scan-contract`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ text: contractText.value })
                     });
-                    const data = await res.json();
-                    scanResult.value = extractAnswer(data);
+                    
+                    if (!res.ok) {
+                        const errorText = await res.text();
+                        throw new Error(`服务器报错: ${errorText}`);
+                    }
+
+                    // 开启水管接收数据流
+                    const reader = res.body.getReader();
+                    const decoder = new TextDecoder('utf-8');
+                    isLoading.value = false; // 接到第一滴水，马上关闭按钮的转圈动画
+                    
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        scanResult.value += decoder.decode(value, {stream: true});
+                    }
                 } catch (e) {
-                    scanResult.value = "网络错误，无法连接到后端服务器。";
-                } finally {
+                    scanResult.value = "系统调试信息：" + e.message;
                     isLoading.value = false;
                 }
             };
 
+            // 模块二：问答流式咨询
             const askLegal = async () => {
                 if(!questionText.value) return alert("请输入你的问题");
                 isLoading.value = true;
-                qaResult.value = '';
+                qaResult.value = ''; // 点击时清空上一次的结果
                 try {
                     const res = await fetch(`/api/legal-qa`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ text: questionText.value })
                     });
-                    const data = await res.json();
-                    qaResult.value = extractAnswer(data);
+
+                    if (!res.ok) {
+                        const errorText = await res.text();
+                        throw new Error(`服务器报错: ${errorText}`);
+                    }
+
+                    // 开启水管接收数据流
+                    const reader = res.body.getReader();
+                    const decoder = new TextDecoder('utf-8');
+                    isLoading.value = false; // 接到第一滴水，马上关闭按钮的转圈动画
+                    
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        qaResult.value += decoder.decode(value, {stream: true});
+                    }
                 } catch (e) {
-                    qaResult.value = "网络错误，无法连接到后端服务器。";
-                } finally {
+                    qaResult.value = "系统调试信息：" + e.message;
                     isLoading.value = false;
                 }
             };
