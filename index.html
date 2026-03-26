@@ -2,124 +2,250 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>「疆味法盾」农业电商合规咨询平台</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        body { background-color: #f3f4f6; display: flex; justify-content: center; }
-        #app { width: 100%; max-width: 414px; background-color: #ffffff; min-height: 100vh; position: relative; padding-bottom: 70px; }
+        body { background-color: #f8fafc; display: flex; justify-content: center; font-family: sans-serif; }
+        #app { width: 100%; max-width: 414px; background-color: #ffffff; min-height: 100vh; position: relative; padding-bottom: 80px; box-shadow: 0 0 20px rgba(0,0,0,0.05); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .pb-safe-area-bottom { padding-bottom: env(safe-area-inset-bottom); }
+        /* 跑马灯动画 */
+        @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+        .animate-marquee { display: inline-block; animation: marquee 15s linear infinite; white-space: nowrap; }
     </style>
 </head>
 <body>
 <div id="app">
-    <header class="bg-green-600 text-white p-4 text-center font-bold text-lg sticky top-0 z-10">「疆味法盾」农业电商合规咨询平台</header>
+    <header class="sticky top-0 bg-white/90 backdrop-blur-md border-b border-slate-100 px-4 py-4 z-40">
+        <h1 class="text-xl font-bold text-slate-800">{{ pageTitles[page] || '疆味法盾' }}</h1>
+    </header>
 
-    <div class="flex border-b">
-        <div @click="tab = 'scan'" :class="tab === 'scan' ? 'border-green-600 text-green-600 border-b-2' : 'text-gray-500'" class="flex-1 text-center py-3 font-bold cursor-pointer">合同风险排查</div>
-        <div @click="tab = 'qa'" :class="tab === 'qa' ? 'border-green-600 text-green-600 border-b-2' : 'text-gray-500'" class="flex-1 text-center py-3 font-bold cursor-pointer">大白话法律咨询</div>
+    <div v-if="page === 'home'" class="p-4 space-y-6">
+        <div class="bg-amber-50 border border-amber-100 rounded-xl p-3 flex items-center gap-3 overflow-hidden">
+            <i data-lucide="alert-circle" class="text-amber-500 shrink-0 w-5 h-5"></i>
+            <div class="overflow-hidden w-full">
+                <div class="text-sm text-amber-800 font-medium animate-marquee">
+                    提醒：近期发现多起针对鲜果电商的“职业打假”投诉，请及时自查标签合规性。
+                </div>
+            </div>
+        </div>
+
+        <div class="relative">
+            <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5"></i>
+            <input type="text" placeholder="搜索合同模版、法律知识..." class="w-full bg-white border border-slate-200 rounded-2xl py-3 pl-12 pr-4 text-sm focus:outline-none focus:border-emerald-500 shadow-sm">
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+            <button @click="navigateTo('contracts')" class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col items-center gap-3 active:scale-95 transition-transform">
+                <div class="w-14 h-14 bg-emerald-100 rounded-2xl flex items-center justify-center text-emerald-600">
+                    <i data-lucide="file-text" class="w-8 h-8"></i>
+                </div>
+                <span class="font-bold">合同模版库</span>
+            </button>
+            <button @click="navigateTo('risk-check')" class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col items-center gap-3 active:scale-95 transition-transform">
+                <div class="w-14 h-14 bg-blue-100 rounded-2xl flex items-center justify-center text-blue-600">
+                    <i data-lucide="shield-check" class="w-8 h-8"></i>
+                </div>
+                <span class="font-bold">AI风险自查</span>
+            </button>
+            <button @click="navigateTo('knowledge')" class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col items-center gap-3 active:scale-95 transition-transform">
+                <div class="w-14 h-14 bg-amber-100 rounded-2xl flex items-center justify-center text-amber-600">
+                    <i data-lucide="book-open" class="w-8 h-8"></i>
+                </div>
+                <span class="font-bold">大白话知识</span>
+            </button>
+            <button class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col items-center gap-3 active:scale-95 transition-transform opacity-60">
+                <div class="w-14 h-14 bg-purple-100 rounded-2xl flex items-center justify-center text-purple-600">
+                    <i data-lucide="printer" class="w-8 h-8"></i>
+                </div>
+                <span class="font-bold">标签生成</span>
+            </button>
+        </div>
+
+        <div class="bg-emerald-600 rounded-3xl p-6 text-white relative overflow-hidden">
+            <div class="relative z-10 space-y-2">
+                <h3 class="text-xl font-bold">返乡创业大学生专项</h3>
+                <p class="text-emerald-100 text-sm">凭身份认证可领 0元 法律咨询券</p>
+                <button class="bg-white text-emerald-600 px-4 py-2 rounded-full text-sm font-bold mt-2">立即领取</button>
+            </div>
+            <i data-lucide="file-check" class="absolute -right-4 -bottom-4 opacity-20 w-32 h-32"></i>
+        </div>
     </div>
 
-    <div v-if="tab === 'scan'" class="p-4">
-        <p class="text-sm text-gray-500 mb-2">演示说明：在此粘贴合同条款文本进行风险分析</p>
-        <textarea v-model="contractText" rows="4" class="w-full border rounded-lg p-2 text-sm focus:ring-green-500 focus:border-green-500 mb-4" placeholder="例如：买家可在收到水果后30天内无理由退款并要求十倍赔偿..."></textarea>
-        
-        <button @click="analyzeContract" :disabled="isLoading" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg flex justify-center items-center">
-            <span v-if="isLoading">AI 分析中...</span>
-            <span v-else>扫描风险</span>
-        </button>
+    <div v-if="page === 'risk-check'" class="p-4 space-y-6">
+        <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-4">
+            <div class="text-center space-y-2 mb-6">
+                <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto">
+                    <i data-lucide="camera" class="w-8 h-8"></i>
+                </div>
+                <h3 class="text-lg font-bold">合同条款 AI 扫描</h3>
+                <p class="text-xs text-slate-400">粘贴条款，自动识别霸王条款防坑</p>
+            </div>
+            
+            <textarea v-model="contractText" rows="4" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:border-blue-500" placeholder="在此粘贴您觉得有风险的合同条款..."></textarea>
+            
+            <button @click="analyzeContract" :disabled="isLoading" class="w-full bg-blue-600 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-blue-200 flex items-center justify-center gap-2 active:scale-95">
+                <i v-if="isLoading" data-lucide="loader-2" class="w-5 h-5 animate-spin"></i>
+                <i v-else data-lucide="scan" class="w-5 h-5"></i>
+                {{ isLoading ? 'AI 深度扫描中...' : '立即扫描分析' }}
+            </button>
 
-        <div v-if="scanResult" class="mt-6 border-t pt-4">
-            <h3 class="font-bold text-gray-800 mb-2">分析结果：</h3>
-            <div class="bg-gray-50 p-3 rounded text-sm text-gray-700 whitespace-pre-wrap leading-relaxed border border-gray-200">
+            <div v-if="scanResult" class="mt-6 bg-blue-50 p-4 rounded-xl text-sm text-slate-700 leading-relaxed whitespace-pre-wrap border border-blue-100">
+                <div class="font-bold text-blue-800 mb-2 flex items-center gap-2">
+                    <i data-lucide="shield-alert" class="w-4 h-4"></i> 扫描报告：
+                </div>
                 {{ scanResult }}
             </div>
         </div>
     </div>
 
-    <div v-if="tab === 'qa'" class="p-4">
-        <div class="bg-blue-50 text-blue-800 p-3 rounded-lg text-sm mb-4">
-            💡 遇到纠纷不知道怎么办？直接用大白话问 AI。
+    <div v-if="page === 'knowledge'" class="p-4 space-y-6">
+        <div class="bg-amber-50 text-amber-800 p-4 rounded-2xl text-sm border border-amber-100 flex items-start gap-3">
+            <i data-lucide="lightbulb" class="w-5 h-5 shrink-0 mt-0.5"></i>
+            <p>遇到纠纷不知道怎么办？直接用大白话问疆味法盾的专属 AI 律师。</p>
         </div>
-        <textarea v-model="questionText" rows="3" class="w-full border rounded-lg p-2 text-sm focus:ring-blue-500 mb-4" placeholder="例如：我自家种的散装苹果发快递，包装上需要印生产日期吗？"></textarea>
-        
-        <button @click="askLegal" :disabled="isLoading" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg flex justify-center items-center">
-            <span v-if="isLoading">查阅法条中...</span>
-            <span v-else>立即咨询</span>
-        </button>
 
-        <div v-if="qaResult" class="mt-6">
-            <h3 class="font-bold text-gray-800 mb-2">解答：</h3>
-            <div class="bg-blue-50 p-4 rounded-lg text-sm text-gray-800 leading-relaxed">
+        <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-4">
+            <textarea v-model="questionText" rows="3" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-500" placeholder="例如：买家收到葡萄说坏了一小半要求全额退款，我该怎么处理？"></textarea>
+            
+            <button @click="askLegal" :disabled="isLoading" class="w-full bg-emerald-600 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-emerald-200 flex items-center justify-center gap-2 active:scale-95">
+                <i v-if="isLoading" data-lucide="loader-2" class="w-5 h-5 animate-spin"></i>
+                <i v-else data-lucide="message-square" class="w-5 h-5"></i>
+                {{ isLoading ? '翻阅法条中...' : '发送咨询' }}
+            </button>
+
+            <div v-if="qaResult" class="mt-6 bg-slate-50 p-4 rounded-xl text-sm text-slate-700 leading-relaxed whitespace-pre-wrap border border-slate-200">
+                <div class="font-bold text-emerald-700 mb-2 flex items-center gap-2">
+                    <i data-lucide="scale" class="w-4 h-4"></i> 律师解答：
+                </div>
                 {{ qaResult }}
             </div>
         </div>
     </div>
+
+    <div v-if="page === 'contracts' || page === 'profile'" class="p-8 text-center text-slate-400 mt-10">
+        <i data-lucide="hammer" class="w-12 h-12 mx-auto mb-3 opacity-50"></i>
+        <p>该功能模块正在开发中...</p>
+        <p class="text-xs mt-2">（比赛演示重点展示“风险自查”和“大白话知识”）</p>
+    </div>
+
+    <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-slate-200 flex justify-around items-center py-2 pb-safe-area-bottom z-50">
+        <button @click="navigateTo('home')" :class="page === 'home' ? 'text-emerald-600' : 'text-slate-400'" class="flex flex-col items-center gap-1 p-2 w-16">
+            <i data-lucide="home" class="w-6 h-6"></i>
+            <span class="text-[10px] font-medium">首页</span>
+        </button>
+        <button @click="navigateTo('contracts')" :class="page === 'contracts' ? 'text-emerald-600' : 'text-slate-400'" class="flex flex-col items-center gap-1 p-2 w-16">
+            <i data-lucide="file-text" class="w-6 h-6"></i>
+            <span class="text-[10px] font-medium">合同</span>
+        </button>
+        <button @click="navigateTo('risk-check')" :class="page === 'risk-check' ? 'text-blue-600' : 'text-slate-400'" class="flex flex-col items-center gap-1 p-2 w-16 -mt-4">
+            <div class="bg-blue-600 text-white rounded-full p-2 shadow-lg shadow-blue-200">
+                <i data-lucide="shield-check" class="w-6 h-6"></i>
+            </div>
+            <span class="text-[10px] font-medium mt-1">自查</span>
+        </button>
+        <button @click="navigateTo('knowledge')" :class="page === 'knowledge' ? 'text-emerald-600' : 'text-slate-400'" class="flex flex-col items-center gap-1 p-2 w-16">
+            <i data-lucide="book-open" class="w-6 h-6"></i>
+            <span class="text-[10px] font-medium">知识</span>
+        </button>
+        <button @click="navigateTo('profile')" :class="page === 'profile' ? 'text-emerald-600' : 'text-slate-400'" class="flex flex-col items-center gap-1 p-2 w-16">
+            <i data-lucide="user" class="w-6 h-6"></i>
+            <span class="text-[10px] font-medium">我的</span>
+        </button>
+    </nav>
 </div>
 
 <script>
-    const { createApp, ref } = Vue;
-
-    // ⚠️ 极其重要：替换为你自己在 Render 上的后端链接！
-    const BACKEND_URL = "https://test-jjtw.onrender.com"; 
+    const { createApp, ref, nextTick, onMounted } = Vue;
 
     createApp({
         setup() {
-            const tab = ref('scan');
+            const page = ref('home');
+            const pageTitles = {
+                'home': '疆味法盾',
+                'contracts': '合同模版',
+                'risk-check': 'AI 风险自查',
+                'knowledge': 'AI 法律咨询',
+                'profile': '个人中心'
+            };
+
             const contractText = ref('');
             const questionText = ref('');
             const scanResult = ref('');
             const qaResult = ref('');
             const isLoading = ref(false);
 
-            // 提取 Coze 答案的辅助函数
-            const extractAnswer = (apiResponse) => {
-                if(apiResponse.code === 0 && apiResponse.data.messages) {
-                    const answerMsg = apiResponse.data.messages.find(msg => msg.type === 'answer');
-                    return answerMsg ? answerMsg.content : "AI 返回的数据为空";
-                }
-                return "请求失败：" + (apiResponse.msg || "未知错误");
+            // 路由导航函数
+            const navigateTo = async (targetPage) => {
+                page.value = targetPage;
+                window.scrollTo(0, 0);
+                // 页面切换后重新渲染图标
+                await nextTick();
+                lucide.createIcons();
             };
 
+            // 模块一：合同流式扫描 (对接 Render 后端)
             const analyzeContract = async () => {
                 if(!contractText.value) return alert("请输入合同内容");
                 isLoading.value = true;
-                scanResult.value = '';
+                scanResult.value = ''; 
                 try {
                     const res = await fetch(`/api/scan-contract`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ text: contractText.value })
                     });
-                    const data = await res.json();
-                    scanResult.value = extractAnswer(data);
+                    if (!res.ok) throw new Error(`服务器报错`);
+                    const reader = res.body.getReader();
+                    const decoder = new TextDecoder('utf-8');
+                    isLoading.value = false; 
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        scanResult.value += decoder.decode(value, {stream: true});
+                    }
                 } catch (e) {
-                    scanResult.value = "网络错误，无法连接到后端服务器。";
-                } finally {
+                    scanResult.value = "系统调试信息：" + e.message;
                     isLoading.value = false;
                 }
             };
 
+            // 模块二：问答流式咨询 (对接 Render 后端)
             const askLegal = async () => {
                 if(!questionText.value) return alert("请输入你的问题");
                 isLoading.value = true;
-                qaResult.value = '';
+                qaResult.value = ''; 
                 try {
                     const res = await fetch(`/api/legal-qa`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ text: questionText.value })
                     });
-                    const data = await res.json();
-                    qaResult.value = extractAnswer(data);
+                    if (!res.ok) throw new Error(`服务器报错`);
+                    const reader = res.body.getReader();
+                    const decoder = new TextDecoder('utf-8');
+                    isLoading.value = false; 
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        qaResult.value += decoder.decode(value, {stream: true});
+                    }
                 } catch (e) {
-                    qaResult.value = "网络错误，无法连接到后端服务器。";
-                } finally {
+                    qaResult.value = "系统调试信息：" + e.message;
                     isLoading.value = false;
                 }
             };
 
-            return { tab, contractText, questionText, scanResult, qaResult, isLoading, analyzeContract, askLegal }
+            // 初始加载图标
+            onMounted(() => {
+                lucide.createIcons();
+            });
+
+            return { page, pageTitles, navigateTo, contractText, questionText, scanResult, qaResult, isLoading, analyzeContract, askLegal }
         }
     }).mount('#app');
 </script>
