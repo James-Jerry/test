@@ -9,22 +9,31 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         body { background-color: #f8fafc; display: flex; justify-content: center; font-family: sans-serif; }
-        #app { width: 100%; max-width: 414px; background-color: #f8fafc; min-height: 100vh; position: relative; padding-bottom: 80px; box-shadow: 0 0 20px rgba(0,0,0,0.05); }
+        #app { width: 100%; max-width: 414px; background-color: #f8fafc; min-height: 100vh; position: relative; padding-bottom: 80px; box-shadow: 0 0 20px rgba(0,0,0,0.05); overflow-x: hidden; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .pb-safe-area-bottom { padding-bottom: env(safe-area-inset-bottom); }
         @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
         .animate-marquee { display: inline-block; animation: marquee 15s linear infinite; white-space: nowrap; }
-        /* 页面切换动画过渡 */
         .fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease, transform 0.2s ease; }
         .fade-enter-from { opacity: 0; transform: translateX(10px); }
         .fade-leave-to { opacity: 0; transform: translateX(-10px); }
+        @keyframes slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .animate-slide-up { animation: slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        /* 模拟合同正文的信纸背景 */
+        .paper-bg { background-color: #fffdf8; background-image: repeating-linear-gradient(transparent, transparent 27px, #f0f0f0 28px); background-attachment: local; line-height: 28px; }
     </style>
 </head>
 <body>
 <div id="app">
+    <transition name="fade">
+        <div v-if="toastMsg" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black/80 text-white px-6 py-3 rounded-2xl z-[100] shadow-2xl flex items-center gap-2 whitespace-nowrap">
+            {{ toastMsg }}
+        </div>
+    </transition>
+
     <header v-if="page !== 'profile'" class="sticky top-0 bg-white/90 backdrop-blur-md border-b border-slate-100 px-4 py-4 flex items-center gap-3 z-40">
-        <button v-if="['contract-editor', 'risk-scan-result', 'label-gen'].includes(page)" @click="goBack" class="p-1 -ml-1 text-slate-600">
+        <button v-if="!['home', 'contracts', 'risk-check', 'knowledge'].includes(page)" @click="goBack" class="p-1 -ml-1 text-slate-600">
             <i data-lucide="chevron-left" class="w-7 h-7"></i>
         </button>
         <h1 class="text-xl font-bold text-slate-800">{{ pageTitles[page] }}</h1>
@@ -34,43 +43,44 @@
         <div :key="page">
             <div v-if="page === 'home'" class="p-4 space-y-6 pb-24">
                 <div class="bg-amber-50 border border-amber-100 rounded-xl p-3 flex items-center gap-3 overflow-hidden">
-                    <i data-lucide="alert-circle" class="text-amber-500 shrink-0 w-5 h-5"></i>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-amber-500 shrink-0 w-5 h-5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                     <div class="overflow-hidden w-full text-sm text-amber-800 font-medium">
                         <div class="animate-marquee">提醒：近期发现多起针对鲜果电商的“职业打假”投诉，请及时自查标签合规性。</div>
                     </div>
                 </div>
 
-                <div class="relative">
-                    <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5"></i>
-                    <input type="text" placeholder="搜索合同模版、法律知识..." class="w-full bg-white border border-slate-200 rounded-2xl py-4 pl-12 pr-4 text-base focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all shadow-sm">
+                <div class="relative flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute left-4 text-slate-400 w-5 h-5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <input v-model="searchQuery" @keyup.enter="globalSearch" type="text" placeholder="输入问题，AI 律师全网检索..." class="w-full bg-white border border-slate-200 rounded-2xl py-4 pl-12 pr-20 text-sm focus:outline-none focus:border-emerald-500 shadow-sm">
+                    <button @click="globalSearch" class="absolute right-2 bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold active:scale-95 shadow-md shadow-emerald-200">检索</button>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <button @click="navigateTo('contracts')" class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col items-center gap-3 text-center active:scale-95 transition-transform">
-                        <div class="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center text-emerald-600"><i data-lucide="file-text" class="w-8 h-8"></i></div>
+                        <div class="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center text-emerald-600"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg></div>
                         <span class="font-bold text-lg">合同模版库</span><span class="text-xs text-slate-400">填空式签合同</span>
                     </button>
                     <button @click="navigateTo('risk-check')" class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col items-center gap-3 text-center active:scale-95 transition-transform">
-                        <div class="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center text-blue-600"><i data-lucide="shield-check" class="w-8 h-8"></i></div>
+                        <div class="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center text-blue-600"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg></div>
                         <span class="font-bold text-lg">风险自查</span><span class="text-xs text-slate-400">防范合同霸王条款</span>
                     </button>
                     <button @click="navigateTo('knowledge')" class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col items-center gap-3 text-center active:scale-95 transition-transform">
-                        <div class="w-16 h-16 bg-amber-100 rounded-2xl flex items-center justify-center text-amber-600"><i data-lucide="book-open" class="w-8 h-8"></i></div>
+                        <div class="w-16 h-16 bg-amber-100 rounded-2xl flex items-center justify-center text-amber-600"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></div>
                         <span class="font-bold text-lg">大白话知识</span><span class="text-xs text-slate-400">AI 法律问答</span>
                     </button>
                     <button @click="navigateTo('label-gen')" class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col items-center gap-3 text-center active:scale-95 transition-transform">
-                        <div class="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center text-purple-600"><i data-lucide="printer" class="w-8 h-8"></i></div>
+                        <div class="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center text-purple-600"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg></div>
                         <span class="font-bold text-lg">标签生成</span><span class="text-xs text-slate-400">合规标签预览打印</span>
                     </button>
                 </div>
 
-                <div class="bg-emerald-600 rounded-3xl p-6 text-white relative overflow-hidden">
+                <div @click="navigateTo('auth')" class="bg-emerald-600 rounded-3xl p-6 text-white relative overflow-hidden active:scale-95 transition-transform cursor-pointer shadow-lg shadow-emerald-200">
                     <div class="relative z-10 space-y-2">
                         <h3 class="text-xl font-bold">返乡创业大学生专项</h3>
                         <p class="text-emerald-100 text-sm">凭身份认证可领 0元 法律咨询券</p>
-                        <button class="bg-white text-emerald-600 px-4 py-2 rounded-full text-sm font-bold mt-2">立即领取</button>
+                        <button class="bg-white text-emerald-600 px-4 py-2 rounded-full text-sm font-bold mt-2 pointer-events-none">立即认证领取</button>
                     </div>
-                    <i data-lucide="file-check" class="absolute -right-4 -bottom-4 opacity-20 w-32 h-32"></i>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute -right-4 -bottom-4 opacity-20 w-32 h-32"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="m9 15 2 2 4-4"/></svg>
                 </div>
             </div>
 
@@ -101,11 +111,11 @@
                     <div v-if="contractStep === 1" class="space-y-4">
                         <h3 class="text-lg font-bold">第一步：填写主体信息</h3>
                         <div class="space-y-2">
-                            <label class="text-sm font-medium text-slate-500">甲方（买方）名称</label>
+                            <label class="text-sm font-medium text-slate-500">甲方（买方 / 委托方）</label>
                             <input v-model="contractForm.buyer" type="text" placeholder="例如：西域果业有限公司" class="w-full border-b-2 border-slate-100 py-2 text-lg focus:border-emerald-500 outline-none transition-colors">
                         </div>
                         <div class="space-y-2">
-                            <label class="text-sm font-medium text-slate-500">乙方（卖方）名称</label>
+                            <label class="text-sm font-medium text-slate-500">乙方（卖方 / 承运方）</label>
                             <input v-model="contractForm.seller" type="text" placeholder="例如：阿克苏老王果园" class="w-full border-b-2 border-slate-100 py-2 text-lg focus:border-emerald-500 outline-none transition-colors">
                         </div>
                     </div>
@@ -114,26 +124,34 @@
                         <div class="bg-yellow-50 p-4 rounded-xl space-y-4 border border-yellow-100">
                             <div class="space-y-2">
                                 <div class="flex items-center gap-2">
-                                    <label class="text-sm font-bold text-slate-700">约定损耗率</label>
+                                    <label class="text-sm font-bold text-slate-700">关键比率/费用约定</label>
                                     <i data-lucide="info" class="w-4 h-4 text-amber-500"></i>
                                 </div>
-                                <p class="text-xs text-amber-700">解释：损耗率是指生鲜在路上烂了多少算正常。通常建议5%。</p>
-                                <input v-model="contractForm.lossRate" type="text" class="w-full bg-white border border-amber-200 rounded-lg py-2 px-3 text-lg">
+                                <p class="text-xs text-amber-700">例如：鲜果损耗率5%、物流冷链费2元/件、带货佣金20%等。</p>
+                                <input v-model="contractForm.lossRate" type="text" placeholder="例如：5%" class="w-full bg-white border border-amber-200 rounded-lg py-2 px-3 text-lg">
                             </div>
                         </div>
                     </div>
-                    <div v-if="contractStep === 3" class="space-y-4 text-center py-8">
-                        <div class="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <i data-lucide="check-circle-2" class="w-12 h-12"></i>
+                    <div v-if="contractStep === 3" class="space-y-4">
+                        <h3 class="text-lg font-bold flex items-center gap-2">
+                            <i data-lucide="check-circle-2" class="text-emerald-500 w-6 h-6"></i> 合同已自动生成
+                        </h3>
+                        <div class="border border-slate-200 rounded-xl p-5 paper-bg text-sm text-slate-800 shadow-inner h-[300px] overflow-y-auto">
+                            <h2 class="text-center font-bold text-lg mb-4">{{ contractForm.product }}</h2>
+                            <p class="font-bold">甲方：{{ contractForm.buyer || '（待补充）' }}</p>
+                            <p class="font-bold mb-4">乙方：{{ contractForm.seller || '（待补充）' }}</p>
+                            <p>鉴于甲方业务经营需要，且乙方具备相应的供应/服务能力。本着平等互利的原则，双方经友好协商，就相关合作事宜达成如下协议，以兹共同遵守：</p>
+                            <p class="font-bold mt-2">第一条 合作内容与标准</p>
+                            <p>1. 双方确认，针对本次合作的特定指标（如损耗率、佣金比例等），标准约定为：<span class="text-emerald-600 font-bold border-b border-emerald-600 px-1">{{ contractForm.lossRate || '___' }}</span>。</p>
+                            <p>2. 乙方需保证提供的产品或服务完全符合国家相关法律法规及行业标准。</p>
+                            <p class="font-bold mt-2">第二条 违约责任</p>
+                            <p>若任何一方违反本合同约定，违约方应承担因此给守约方造成的全部直接经济损失。若引发消费者投诉及市场监管处罚，由过错方全额承担。</p>
+                            <p class="text-slate-400 mt-6 text-xs">（此为电子合同草稿预览版，具有同等法律效力先决条件）</p>
                         </div>
-                        <h3 class="text-2xl font-bold">合同已生成</h3>
-                        <p class="text-slate-500 mt-2 text-sm leading-relaxed">
-                            《{{ contractForm.product }}》<br>
-                            <span class="text-emerald-600 font-bold">甲方：{{ contractForm.buyer || '未填写' }}</span><br>
-                            <span class="text-emerald-600 font-bold">乙方：{{ contractForm.seller || '未填写' }}</span>
-                        </p>
-                        <div class="pt-6 space-y-3">
-                            <button class="w-full bg-emerald-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-emerald-200">下载 PDF 电子版</button>
+                        <div class="pt-2 space-y-3">
+                            <button @click="showToast('✅ 合同已成功下载至手机文件')" class="w-full bg-emerald-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-emerald-200 flex items-center justify-center gap-2">
+                                <i data-lucide="download" class="w-5 h-5"></i> 确认无误，下载正式版
+                            </button>
                         </div>
                     </div>
 
@@ -146,7 +164,7 @@
             <div v-if="page === 'risk-check'" class="p-4 space-y-6 pb-24">
                 <div class="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm text-center space-y-6 relative overflow-hidden">
                     <div class="w-20 h-20 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center mx-auto relative z-10">
-                        <i v-if="!isScanning" data-lucide="shield-check" class="w-10 h-10"></i>
+                        <svg v-if="!isScanning" xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
                         <i v-else data-lucide="loader-2" class="w-10 h-10 animate-spin"></i>
                     </div>
                     <div class="space-y-2 relative z-10">
@@ -221,17 +239,25 @@
 
                     <div class="pt-4">
                         <h4 class="text-sm font-bold text-slate-500 mb-3 flex items-center gap-2"><i data-lucide="eye" class="w-4 h-4"></i> 打印预览</h4>
-                        <div class="border-2 border-dashed border-slate-300 p-6 rounded-xl bg-slate-50 text-center space-y-2">
+                        <div class="border-2 border-dashed border-slate-300 p-6 rounded-xl bg-slate-50 text-center space-y-2 relative">
                             <div class="text-xl font-bold">{{ labelForm.name || '产品名称' }}</div>
                             <div class="text-sm">产地：{{ labelForm.origin || '未填写' }}</div>
                             <div class="text-sm">品类：{{ labelForm.category }}</div>
                             <div class="text-xs text-slate-400 pt-2 border-t border-slate-200 mt-2">
-                                {{ labelForm.category.includes('初级') ? '本产品属于初级农产品，符合质量安全标准' : '预包装食品需额外补充生产许可证号' }}
+                                {{ labelForm.category.includes('初级') ? '本产品属于初级农产品，符合质量安全标准' : '预包装食品需额外补充生产许可编号' }}
+                            </div>
+                            <div class="mt-4 flex flex-col items-center opacity-80">
+                                <svg width="180" height="40" viewBox="0 0 200 40" fill="black">
+                                    <rect x="10" width="4" height="40"/><rect x="18" width="2" height="40"/><rect x="24" width="6" height="40"/><rect x="34" width="2" height="40"/><rect x="40" width="8" height="40"/><rect x="52" width="2" height="40"/><rect x="58" width="4" height="40"/><rect x="66" width="6" height="40"/><rect x="76" width="2" height="40"/><rect x="82" width="4" height="40"/><rect x="90" width="8" height="40"/><rect x="102" width="2" height="40"/><rect x="108" width="6" height="40"/><rect x="118" width="4" height="40"/><rect x="126" width="2" height="40"/><rect x="132" width="8" height="40"/><rect x="144" width="4" height="40"/><rect x="152" width="2" height="40"/><rect x="158" width="6" height="40"/><rect x="168" width="4" height="40"/><rect x="176" width="2" height="40"/><rect x="182" width="8" height="40"/>
+                                </svg>
+                                <span class="text-[10px] tracking-widest mt-1 text-slate-500">SC{{ Math.floor(Math.random() * 10000000000) }}</span>
                             </div>
                         </div>
                     </div>
-                    <button class="w-full bg-emerald-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-emerald-200 flex items-center justify-center gap-2">
-                        <i data-lucide="printer" class="w-5 h-5"></i> 导出合规标签图
+                    <button @click="simulateDownload" class="w-full bg-emerald-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-emerald-200 flex items-center justify-center gap-2 active:scale-95 transition-transform">
+                        <i v-if="!isDownloading" data-lucide="download" class="w-5 h-5"></i>
+                        <i v-else data-lucide="loader-2" class="w-5 h-5 animate-spin"></i>
+                        {{ isDownloading ? '生成图片中...' : '导出合规标签图' }}
                     </button>
                 </div>
             </div>
@@ -243,30 +269,111 @@
                             <i data-lucide="user" class="w-10 h-10"></i>
                         </div>
                         <div>
-                            <h2 class="text-2xl font-bold">老王果园 (比赛演示版)</h2>
-                            <div class="flex items-center gap-2 mt-2">
-                                <span class="text-xs bg-emerald-500 px-2 py-1 rounded-full border border-emerald-400">已实名认证</span>
+                            <h2 class="text-2xl font-bold">老王果园 (演示版)</h2>
+                            <div @click="navigateTo('auth')" class="flex items-center gap-2 mt-2 cursor-pointer active:scale-95">
+                                <span class="text-xs bg-emerald-500 px-2 py-1 rounded-full border border-emerald-400 flex items-center gap-1"><i data-lucide="shield-check" class="w-3 h-3"></i> 已实名认证</span>
                             </div>
                         </div>
                     </div>
                     <div class="grid grid-cols-3 gap-4 text-center">
-                        <div><div class="text-2xl font-bold">12</div><div class="text-xs opacity-80 mt-1">我的合同</div></div>
-                        <div><div class="text-2xl font-bold">5</div><div class="text-xs opacity-80 mt-1">自查记录</div></div>
+                        <div @click="navigateTo('my-contracts')" class="cursor-pointer active:scale-95"><div class="text-2xl font-bold">12</div><div class="text-xs opacity-80 mt-1">我的合同</div></div>
+                        <div @click="navigateTo('my-records')" class="cursor-pointer active:scale-95"><div class="text-2xl font-bold">5</div><div class="text-xs opacity-80 mt-1">自查记录</div></div>
                         <div><div class="text-2xl font-bold">99</div><div class="text-xs opacity-80 mt-1">AI 算力点</div></div>
                     </div>
                 </div>
                 <div class="p-4 -mt-4 space-y-4 relative z-10">
                     <div class="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
-                        <button class="w-full p-5 flex items-center justify-between border-b border-slate-50"><div class="flex items-center gap-3"><i data-lucide="file-text" class="text-emerald-600 w-5 h-5"></i><span class="font-medium">我的下载记录</span></div><i data-lucide="chevron-right" class="w-5 h-5 text-slate-300"></i></button>
-                        <button class="w-full p-5 flex items-center justify-between border-b border-slate-50"><div class="flex items-center gap-3"><i data-lucide="shield-check" class="text-blue-600 w-5 h-5"></i><span class="font-medium">身份认证中心</span></div><i data-lucide="chevron-right" class="w-5 h-5 text-slate-300"></i></button>
-                        <button class="w-full p-5 flex items-center justify-between"><div class="flex items-center gap-3"><i data-lucide="alert-circle" class="text-amber-600 w-5 h-5"></i><span class="font-medium">免责声明与服务边界</span></div><i data-lucide="chevron-right" class="w-5 h-5 text-slate-300"></i></button>
+                        <button @click="navigateTo('my-records')" class="w-full p-5 flex items-center justify-between border-b border-slate-50 active:bg-slate-50"><div class="flex items-center gap-3"><i data-lucide="download-cloud" class="text-emerald-600 w-5 h-5"></i><span class="font-medium">我的下载记录</span></div><i data-lucide="chevron-right" class="w-5 h-5 text-slate-300"></i></button>
+                        <button @click="navigateTo('auth')" class="w-full p-5 flex items-center justify-between border-b border-slate-50 active:bg-slate-50"><div class="flex items-center gap-3"><i data-lucide="shield-check" class="text-blue-600 w-5 h-5"></i><span class="font-medium">身份认证中心</span></div><i data-lucide="chevron-right" class="w-5 h-5 text-slate-300"></i></button>
+                        <button @click="navigateTo('disclaimer')" class="w-full p-5 flex items-center justify-between active:bg-slate-50"><div class="flex items-center gap-3"><i data-lucide="alert-circle" class="text-amber-600 w-5 h-5"></i><span class="font-medium">免责声明与服务边界</span></div><i data-lucide="chevron-right" class="w-5 h-5 text-slate-300"></i></button>
                     </div>
+                </div>
+            </div>
+
+            <div v-if="page === 'auth'" class="p-4 space-y-6 pb-24">
+                <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-4">
+                    <div class="bg-blue-50 text-blue-800 p-3 rounded-lg text-sm mb-2">
+                        认证通过后，您将获得专属法律援助券及更高级别的模版权限。
+                    </div>
+                    <div class="space-y-4">
+                        <div class="border-2 border-dashed border-slate-300 rounded-2xl h-32 flex flex-col items-center justify-center text-slate-400 bg-slate-50 cursor-pointer active:bg-slate-100">
+                            <i data-lucide="camera" class="w-8 h-8 mb-2"></i>
+                            <span class="text-sm font-bold">点击上传身份证人像面</span>
+                        </div>
+                        <div class="border-2 border-dashed border-slate-300 rounded-2xl h-32 flex flex-col items-center justify-center text-slate-400 bg-slate-50 cursor-pointer active:bg-slate-100">
+                            <i data-lucide="camera" class="w-8 h-8 mb-2"></i>
+                            <span class="text-sm font-bold">点击上传身份证国徽面</span>
+                        </div>
+                    </div>
+                    <button @click="submitAuth" class="w-full bg-blue-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-200 mt-4 active:scale-95">
+                        提交审核
+                    </button>
+                </div>
+            </div>
+
+            <div v-if="page === 'my-contracts'" class="p-4 space-y-4 pb-24">
+                <div v-for="(item, idx) in ['《阿克苏冰糖心苹果采购合同》', '《抖音达人带货协议》', '《冷链物流运输年度框架协议》']" :key="idx" class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+                    <h3 class="font-bold text-slate-800 mb-2">{{ item }}</h3>
+                    <div class="flex justify-between items-center text-xs text-slate-400">
+                        <span>2026-03-{{ 20 - idx }} 生成</span>
+                        <span class="text-emerald-600 bg-emerald-50 px-2 py-1 rounded border border-emerald-100">已存档</span>
+                    </div>
+                </div>
+                <p class="text-center text-slate-400 text-sm mt-4">已显示全部记录</p>
+            </div>
+
+            <div v-if="page === 'my-records'" class="p-4 space-y-4 pb-24">
+                <div v-for="(item, idx) in ['发现1处高危：定金不退霸王条款', '标签合规：缺少生产商地址', '未发现明显法律风险']" :key="idx" class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex gap-3 items-center">
+                    <div :class="idx === 0 ? 'bg-red-100 text-red-600' : (idx === 1 ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600')" class="w-10 h-10 rounded-full flex items-center justify-center shrink-0">
+                        <i data-lucide="file-search" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-sm">{{ item }}</h3>
+                        <p class="text-xs text-slate-400 mt-1">扫描时间：2026-03-{{ 22 - idx }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="page === 'disclaimer'" class="p-4 pb-24">
+                <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm prose prose-sm text-slate-600 leading-relaxed">
+                    <h3 class="font-bold text-lg text-slate-800 mb-4">服务边界与免责声明</h3>
+                    <p>1. 本平台（疆味法盾）提供的所有 AI 法律咨询、合同模版及风险排查结果，均基于大语言模型自动生成，仅供用户参考，<strong>不构成正式的法律意见或律师代理承诺</strong>。</p>
+                    <p>2. 在任何涉及重大财产或人身安全的商业决策前，强烈建议您咨询具有执业资质的专业律师。</p>
+                    <p>3. 本平台不对因直接依赖本平台生成的任何文本而导致的任何直接或间接损失承担法律责任。</p>
                 </div>
             </div>
         </div>
     </transition>
 
-    <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-slate-200 flex justify-around items-center py-2 pb-safe-area-bottom z-50">
+    <div v-if="showSearchModal" class="fixed inset-0 z-[60] flex flex-col justify-end bg-slate-900/40 backdrop-blur-sm transition-opacity" @click.self="showSearchModal = false">
+        <div class="bg-white w-full max-w-md mx-auto h-[80vh] rounded-t-3xl shadow-2xl flex flex-col overflow-hidden animate-slide-up">
+            <div class="flex justify-between items-center p-5 border-b border-slate-100 bg-slate-50">
+                <h3 class="font-bold text-lg flex items-center gap-2 text-slate-800">
+                    <i data-lucide="sparkles" class="text-emerald-500 w-5 h-5"></i> AI 法律检索
+                </h3>
+                <button @click="showSearchModal = false" class="bg-slate-200 hover:bg-slate-300 p-1.5 rounded-full text-slate-500 transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50">
+                <div class="flex gap-3 items-start justify-end">
+                    <div class="bg-emerald-500 text-white p-3 rounded-2xl rounded-tr-none text-sm leading-relaxed shadow-sm">{{ searchQuery }}</div>
+                    <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0 border border-emerald-200"><i data-lucide="user" class="w-4 h-4 text-emerald-600"></i></div>
+                </div>
+                <div class="flex gap-3 items-start">
+                    <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0 border border-blue-200"><i data-lucide="bot" class="w-4 h-4 text-blue-600"></i></div>
+                    <div class="flex-1">
+                        <div v-if="isSearching && !searchResult" class="flex items-center gap-2 text-slate-400 py-2">
+                            <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-blue-500"></i><span class="text-sm">正在为您翻阅农业电商法典...</span>
+                        </div>
+                        <div v-else class="bg-white text-slate-700 p-4 rounded-2xl rounded-tl-none text-sm leading-relaxed whitespace-pre-wrap border border-slate-200 shadow-sm">{{ searchResult }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <nav v-if="['home', 'contracts', 'risk-check', 'knowledge', 'profile'].includes(page)" class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-slate-200 flex justify-around items-center py-2 pb-safe-area-bottom z-50">
         <button @click="navigateTo('home')" :class="page === 'home' ? 'text-emerald-600' : 'text-slate-400'" class="flex flex-col items-center gap-1 p-2 w-16"><i data-lucide="home" class="w-6 h-6"></i><span class="text-[10px] font-medium">首页</span></button>
         <button @click="navigateTo('contracts')" :class="['contracts', 'contract-editor'].includes(page) ? 'text-emerald-600' : 'text-slate-400'" class="flex flex-col items-center gap-1 p-2 w-16"><i data-lucide="file-text" class="w-6 h-6"></i><span class="text-[10px] font-medium">合同</span></button>
         <button @click="navigateTo('risk-check')" :class="page === 'risk-check' ? 'text-blue-600' : 'text-slate-400'" class="flex flex-col items-center gap-1 p-2 w-16 -mt-4"><div class="bg-blue-600 text-white rounded-full p-2 shadow-lg shadow-blue-200"><i data-lucide="shield-check" class="w-6 h-6"></i></div><span class="text-[10px] font-medium mt-1">自查</span></button>
@@ -283,56 +390,65 @@
             const page = ref('home');
             const prevPage = ref('home');
             const pageTitles = {
-                'home': '「疆味法盾」农业电商合规咨询平台', 'contracts': '合同模版库', 'contract-editor': '填空生成合同',
-                'risk-check': '风险自查助手', 'knowledge': 'AI 法律智库', 'label-gen': '合规标签生成', 'profile': '个人中心'
+                'home': '「疆味法盾」农业电商合规咨询平台', 'contracts': '合同模版库', 'contract-editor': '合同智能生成',
+                'risk-check': '风险自查助手', 'knowledge': 'AI 法律智库', 'label-gen': '合规标签生成', 
+                'profile': '个人中心', 'auth': '身份认证中心', 'my-contracts': '我的合同库',
+                'my-records': '操作记录', 'disclaimer': '免责声明'
             };
 
-            // 路由控制
-            const navigateTo = async (target) => {
-                prevPage.value = page.value;
-                page.value = target;
-                window.scrollTo(0, 0);
+            // 全局 Toast
+            const toastMsg = ref('');
+            const showToast = (msg) => {
+                toastMsg.value = msg;
+                setTimeout(() => { toastMsg.value = ''; }, 2000);
             };
-            const goBack = () => navigateTo(prevPage.value === 'contract-editor' ? 'contracts' : 'home');
 
-            // 监听页面切换，重新渲染图标
+            const navigateTo = async (target) => { prevPage.value = page.value; page.value = target; window.scrollTo(0, 0); };
+            const goBack = () => {
+                if (page.value === 'contract-editor') navigateTo('contracts');
+                else if (['my-contracts', 'my-records', 'disclaimer'].includes(page.value)) navigateTo('profile');
+                else if (page.value === 'auth') navigateTo(prevPage.value === 'home' ? 'home' : 'profile');
+                else navigateTo('home');
+            };
+
             watch(page, async () => { await nextTick(); lucide.createIcons(); });
 
-            // --- 模块 1：合同中心数据 ---
+            // 模块 1：合同中心
             const contractTemplates = [
                 { id: '1', title: '鲜果采购合同', category: '农产品交易', description: '适用于果园直接采购，包含损耗约定。' },
                 { id: '2', title: '直播带货合作协议', category: '直播合作', description: '明确佣金、退货责任及样品归还。' },
+                { id: '4', title: '农产品物流运输合同', category: '物流运输', description: '针对生鲜冷链，约定运输时效及货损赔偿。' },
                 { id: '3', title: '采摘季节性用工协议', category: '用工协议', description: '短期用工，明确报酬与安全责任。' }
             ];
             const contractStep = ref(1);
-            const contractForm = reactive({ product: '', buyer: '', seller: '', lossRate: '5%' });
-            const startContract = (template) => {
-                contractForm.product = template.title;
-                contractStep.value = 1;
-                navigateTo('contract-editor');
+            const contractForm = reactive({ product: '', buyer: '', seller: '', lossRate: '' });
+            const startContract = (template) => { 
+                contractForm.product = template.title; 
+                contractForm.buyer = ''; contractForm.seller = ''; contractForm.lossRate = '';
+                contractStep.value = 1; 
+                navigateTo('contract-editor'); 
             };
 
-            // --- 模块 2：标签生成数据 ---
+            // 模块 2：标签生成
             const labelForm = reactive({ category: '鲜果类 (初级农产品)', name: '', origin: '' });
+            const isDownloading = ref(false);
+            const simulateDownload = () => {
+                isDownloading.value = true;
+                setTimeout(() => {
+                    isDownloading.value = false;
+                    showToast('✅ 标签图已保存至手机相册');
+                }, 1200);
+            };
 
-            // --- 模块 3 & 4：AI 流式调用 (完全解决双重输出 BUG) ---
-            const contractText = ref('');
-            const scanResult = ref('');
-            const isScanning = ref(false);
-            
-            const questionText = ref('');
-            const qaResult = ref('');
-            const isAsking = ref(false);
+            // 模块 3：身份认证
+            const submitAuth = () => {
+                showToast('🚀 提交成功，系统审核中...');
+                setTimeout(() => { goBack(); }, 1500);
+            };
 
-            const articles = [
-                { q: '自家树上的苹果需要打印保质期吗？', a: '不需要。初级农产品（如鲜果）不强制标注保质期，但建议标注采摘日期和产地。' },
-                { q: '什么是“职业打假”？如何防范？', a: '指以牟利为目的的投诉。防范核心在于：标签真实、不夸大功效（如绝对不能写“全国第一甜”）。' }
-            ];
-
+            // 模块 4：AI 流式调用
             const callBackendStream = async (endpoint, textPayload, resultRef, loadingRef) => {
-                if(!textPayload) return alert("请输入内容！");
-                loadingRef.value = true;
-                resultRef.value = ''; 
+                loadingRef.value = true; resultRef.value = ''; 
                 try {
                     const res = await fetch(endpoint, {
                         method: 'POST',
@@ -345,27 +461,40 @@
                     while (true) {
                         const { done, value } = await reader.read();
                         if (done) break;
-                        // 因为后端已经拦截了重复数据，前端只需要无脑拼接即可
                         resultRef.value += decoder.decode(value, {stream: true});
                     }
-                } catch (e) {
-                    resultRef.value = "请求出错：" + e.message;
-                } finally {
-                    loadingRef.value = false;
-                }
+                } catch (e) { resultRef.value = "请求出错：" + e.message; } finally { loadingRef.value = false; }
             };
 
-            const analyzeContract = () => callBackendStream('/api/scan-contract', contractText.value, scanResult, isScanning);
-            const askLegal = () => callBackendStream('/api/legal-qa', questionText.value, qaResult, isAsking);
+            const contractText = ref(''); const scanResult = ref(''); const isScanning = ref(false);
+            const analyzeContract = () => { if(contractText.value) callBackendStream('/api/scan-contract', contractText.value, scanResult, isScanning); else showToast("⚠️ 请输入合同内容"); };
+            
+            const questionText = ref(''); const qaResult = ref(''); const isAsking = ref(false);
+            const askLegal = () => { if(questionText.value) callBackendStream('/api/legal-qa', questionText.value, qaResult, isAsking); else showToast("⚠️ 请输入您的问题"); };
+
+            const articles = [
+                { q: '自家树上的苹果需要打印保质期吗？', a: '不需要。初级农产品不强制标注保质期，但建议标注采摘日期和产地。' },
+                { q: '什么是“职业打假”？如何防范？', a: '防范核心在于：标签真实、不夸大功效（如绝对不能写“全国第一甜”）。' }
+            ];
+
+            // 模块 5：全局搜索
+            const searchQuery = ref(''); const searchResult = ref(''); const isSearching = ref(false); const showSearchModal = ref(false);
+            const globalSearch = async () => {
+                if(!searchQuery.value) return showToast("⚠️ 请输入检索关键词");
+                showSearchModal.value = true; searchResult.value = ''; 
+                callBackendStream('/api/legal-qa', searchQuery.value, searchResult, isSearching);
+            };
+            watch(showSearchModal, async (newVal) => { if(newVal) { await nextTick(); lucide.createIcons(); } });
 
             onMounted(() => { lucide.createIcons(); });
 
             return { 
-                page, pageTitles, navigateTo, goBack,
+                page, pageTitles, navigateTo, goBack, toastMsg, showToast,
                 contractTemplates, contractStep, contractForm, startContract,
-                labelForm, articles,
-                contractText, scanResult, isScanning, analyzeContract,
-                questionText, qaResult, isAsking, askLegal
+                labelForm, isDownloading, simulateDownload, submitAuth,
+                articles, contractText, scanResult, isScanning, analyzeContract,
+                questionText, qaResult, isAsking, askLegal,
+                searchQuery, searchResult, isSearching, showSearchModal, globalSearch
             }
         }
     }).mount('#app');
