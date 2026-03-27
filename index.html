@@ -328,7 +328,7 @@
                     step++;
                     if (step < steps.length) loadingText.value = steps[step];
                     else loadingText.value = "AI 正在进行最后的信息深度整理，马上就好...";
-                }, 4000); // 每4秒变一次，缓解焦虑
+                }, 6000); // 每6秒变一次，缓解焦虑
             };
             const stopFakeProgress = () => clearInterval(loadingInterval);
 
