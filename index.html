@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>「疆味法盾」农业电商合规咨询平台</title>
+    <title>「疆味法盾」农业电商法律合规咨询平台</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -292,7 +292,7 @@
     createApp({
         setup() {
             const page = ref('home'); const prevPage = ref('home');
-            const pageTitles = { 'home': '「疆味法盾」农业电商合规咨询平台', 'contracts': '合同模版库', 'contract-editor': '合同智能生成', 'risk-check': '风险自查助手', 'knowledge': 'AI 法律智库', 'label-gen': '合规标签生成', 'profile': '个人中心', 'auth': '身份认证中心', 'my-contracts': '我的合同库', 'my-records': '操作记录', 'disclaimer': '免责声明' };
+            const pageTitles = { 'home': '「疆味法盾」农业电商法律合规咨询平台', 'contracts': '合同模版库', 'contract-editor': '合同智能生成', 'risk-check': '风险自查助手', 'knowledge': 'AI 法律智库', 'label-gen': '合规标签生成', 'profile': '个人中心', 'auth': '身份认证中心', 'my-contracts': '我的合同库', 'my-records': '操作记录', 'disclaimer': '免责声明' };
 
             const toastMsg = ref('');
             const showToast = (msg) => { toastMsg.value = msg; setTimeout(() => { toastMsg.value = ''; }, 2000); };
